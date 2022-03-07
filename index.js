@@ -1,50 +1,68 @@
 require('dotenv').config();
 
-const {Telegraf} = require('telegraf');
+const { Telegraf } = require('telegraf');
 const bot = new Telegraf(process.env.BOT_TOKEN);
-const {Keyboard, Key} = require('telegram-keyboard')
+const { Keyboard, Key } = require('telegram-keyboard');
 
-bot.start((ctx) => ctx.reply('Привіт! Я буду надсилати тобі розклад OwO'));
+const lessonData = require('./lessonData.json');
+const schedule = require('./schedule.json');
 
-bot.command('today', (ctx) => {
-  let currentDay = new Date().getDay();
-  console.log(currentDay);
-  switch (currentDay) {
-    case 0:
-      ctx.reply('Понеділок \n\n 1: Осн. екон. теор.\n Викладач: Зіміна О. В. \n\n 2: Фіз. вих.\n Викладач: Барська М. В. \n\n 3: Буд. та експл. А і Т\n Викладач: Романчук О. В. \n\n 4: Мікропр. техн.\n Викладач: Мірошниченко В. Л.')
-      return;
-    case 1:
-      ctx.reply('Понеділок \n\n 1: Осн. екон. теор.\n Викладач: Зіміна О. В. \n\n 2: Фіз. вих.\n Викладач: Барська М. В. \n\n 3: Буд. та експл. А і Т\n Викладач: Романчук О. В. \n\n 4: Мікропр. техн.\n Викладач: Мірошниченко В. Л.')
-      return;
-    case 2:
-      ctx.reply('Вівторок \n\n 1: Осн. ох. праці\n Викладач: Шмаюк Л. А. \n\n 2: Метрол. та вимір.\n Викладач: Лук*яненко В. В. \n\n 3: Осн. кер. авт.\n Викладач: Рольський М. Я. \n\n 4: Осн. психолог.\n Викладач: Заболотна М. О.')
-      return;
-    case 3:
-      ctx.reply('Середа \n\n 1: Осн. кер. авт.\n Викладач: Рольський М. Я. \n\n 2: Фіз. вих.\n Викладач: Барська М. В. \n\n 3: Укр. мова за проф.\n Викладач: Гаврилець А. О.')
-      return;
-    case 4:
-      ctx.reply('Четвер \n\n 1: Осн. ох. праці\n Викладач: Шмаюк Л. А. \n\n 2: Ел. уст. А і Т\n Викладач: Колібабчук В. І.\n\n 3: Мікропр. техн.\n Викладач: Мірошниченко В. Л. \n\n 4: Іноз. мова\n Викладач: Закревська А. К / Чала В. П.');
-      return;
-    case 5:
-      ctx.reply('П*ятниця \n\n 1: Електроуст. A та Т\n Викладач: Колібабчук В. І \n\n 2: Буд. та експ. А і Т\n Викладач: Романчук О. В. \n\n 3: Метрол. та вимір.\n Викладач: Лук*янеко В. В.')
-      return;
-    case 6:
-      ctx.reply('Понеділок \n\n 1: Осн. екон. теор.\n Викладач: Зіміна О. В. \n\n 2: Фіз. вих.\n Викладач: Барська М. В. \n\n 3: Буд. та експл. А і Т\n Викладач: Романчук О. В. \n\n 4: Мікропр. техн.\n Викладач: Мірошниченко В. Л.')
-      return;
-    default:
-      ctx.reply("Error owo");
-      return;
-  }
-})
+let todaySchedule;
+let dayTitles = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт'];
+
+const keyboard = Keyboard.make([['Пн', 'Вт', 'Ср', 'Чт', 'Пт'], ['🔙']])
+
+bot.start((ctx) => ctx.reply('Привіт! Я бот ✨ЕА-31✨. Для допомоги надішли команду /help'));
 
 bot.command('/week', async (ctx) => {
-    const keyboard = Keyboard.make([
-      ['Пн', 'Вт', 'Ср', 'Чт', 'Пт']
-    ])
   await ctx.reply('На який день прислати розклад?', keyboard.reply())
     .then((reply) => {
-
+      bot.hears(dayTitles, (ctx) => {
+        composeSchedule(ctx.match[0])
+          .then(ctx.reply(todaySchedule))
+      })
     })
 })
+
+bot.hears(dayTitles, (ctx) => {
+    composeSchedule(ctx.match[0])
+    .then(ctx.reply(todaySchedule))
+})
+
+bot.hears('🔙', (ctx) => {
+  ctx.reply('Дні сховано', keyboard.remove(true))
+})
+
+bot.command('/help', (ctx) => {
+  ctx.replyWithMarkdown(
+    '**Допомога**\n /help - Допомога, всі команди\n /week - Показати розклад' 
+  )
+})
+
+async function composeSchedule(day) {
+  console.log('Day:', day)
+  let dayNum;
+  if (day == 'Пн') {
+    dayNum = 0
+  } if (day == 'Вт') {
+    dayNum = 1
+  } if (day == 'Ср') {
+    dayNum = 2
+  } if (day == 'Чт') {
+    dayNum = 3
+  } if (day == 'Пт') {
+    dayNum = 4
+  }
+  console.log('day num:', dayNum)
+  let daySchedule = schedule[dayNum];
+  let response = '';
+  for (let i = 0; i < daySchedule.schedule.length; i++) {
+    let lessonTitle = lessonData.find(x => x.id === daySchedule.schedule[i].id).title;
+    let lessonTeacher = lessonData.find(x => x.id === daySchedule.schedule[i].id).teacher;
+    response = response + `📚 Предмет: ${lessonTitle}\n👩‍🏫 Вчитель: ${lessonTeacher}\n\n`
+    console.log(response);
+  }
+  todaySchedule = response;
+}
 
 bot.launch();
