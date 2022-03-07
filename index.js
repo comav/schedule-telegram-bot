@@ -1,5 +1,11 @@
 require('dotenv').config();
 
+const low = require('lowdb');
+const FileSync = require('lowdb/adapters/FileSync');
+
+const adapter = new FileSync('./data/homeworkData.json');
+const homedb = low(adapter);
+
 const { Telegraf } = require('telegraf');
 const bot = new Telegraf(process.env.BOT_TOKEN);
 const { Keyboard, Key } = require('telegram-keyboard');
@@ -10,12 +16,22 @@ const schedule = require('./data/schedule.json');
 let todaySchedule;
 let dayTitles = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт'];
 
-const keyboard = Keyboard.make([['Пн', 'Вт', 'Ср', 'Чт', 'Пт'], ['🔙']])
+const dayKeyboard = Keyboard.make([['Пн', 'Вт', 'Ср', 'Чт', 'Пт'], ['🔙']]);
+
+let keyboardLessonTitles = [];
+let lessonTitles = [];
+
+for (let i = 0; i < lessonData.length; i++) {
+  keyboardLessonTitles.push(new Array(lessonData[i].title));
+  lessonTitles.push(lessonData[i].title);
+}
+
+const lessonKeyboard = Keyboard.make(keyboardLessonTitles)
 
 bot.start((ctx) => ctx.reply('Привіт! Я бот ✨ЕА-31✨. Для допомоги надішли команду /help'));
 
 bot.command('/week', async (ctx) => {
-  await ctx.reply('На який день прислати розклад?', keyboard.reply())
+  await ctx.reply('На який день прислати розклад?', dayKeyboard.reply())
     .then((reply) => {
       bot.hears(dayTitles, (ctx) => {
         composeSchedule(ctx.match[0])
@@ -30,13 +46,30 @@ bot.hears(dayTitles, (ctx) => {
 })
 
 bot.hears('🔙', (ctx) => {
-  ctx.reply('Дні сховано', keyboard.remove(true))
+  ctx.reply('Дні сховано', dayKeyboard.remove(true))
 })
 
 bot.command('/help', (ctx) => {
   ctx.replyWithMarkdown(
     '**Допомога**\n /help - Допомога, всі команди\n /week - Показати розклад' 
   )
+})
+
+bot.command('/addhomework', (ctx) => {
+  ctx.reply('До якого предмету додати домашнє завдання?', lessonKeyboard.reply())
+    .then((reply) => {
+      bot.hears(lessonTitles, (ctx) => {
+        let chosenTitle = ctx.match[0];
+        let chosenId = lessonData.find(x => x.title === chosenTitle).id;
+        ctx.reply(`Яке домашнє завдання з предмету ${chosenTitle}?`, lessonKeyboard.remove())
+          .then(() => {
+            bot.on('text', (ctx) => {
+              homedb.find({id: chosenId}).assign({note: ctx.update.message.text}).write();
+              ctx.reply('👍 Завдання збережено!')
+            })
+          })
+      })
+    })
 })
 
 async function composeSchedule(day) {
