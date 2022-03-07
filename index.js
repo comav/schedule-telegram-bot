@@ -4,8 +4,8 @@ const { Telegraf } = require('telegraf');
 const bot = new Telegraf(process.env.BOT_TOKEN);
 const { Keyboard, Key } = require('telegram-keyboard');
 
-const lessonData = require('./lessonData.json');
-const schedule = require('./schedule.json');
+const lessonData = require('./data/lessonData.json');
+const schedule = require('./data/schedule.json');
 
 let todaySchedule;
 let dayTitles = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт'];
