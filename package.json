@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "dotenv": "^14.3.2",
+    "lowdb": "^1.0.0",
     "telegraf": "^4.6.0",
     "telegram-keyboard": "^2.3.0"
   }
